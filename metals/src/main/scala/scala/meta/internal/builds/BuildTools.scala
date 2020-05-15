@@ -81,16 +81,27 @@ final class BuildTools(
     if (isBazel) buf += "Bazel"
     buf.result()
   }
+
   def isEmpty: Boolean = {
     all.isEmpty
   }
-  def loadSupported(): Option[BuildTool] = {
-    if (isSbt) Some(SbtBuildTool(workspace, userConfig))
-    else if (isGradle) Some(GradleBuildTool(userConfig))
-    else if (isMaven) Some(MavenBuildTool(userConfig))
-    else if (isMill) Some(MillBuildTool(userConfig))
-    else if (isPants) Some(PantsBuildTool(userConfig))
-    else None
+
+  def loadSupported(): List[BuildTool] = {
+    val buf = List.newBuilder[BuildTool]
+
+    if (isSbt) buf += SbtBuildTool(workspace, userConfig)
+    if (isGradle) buf += GradleBuildTool(userConfig)
+    if (isMaven) buf += MavenBuildTool(userConfig)
+    if (isMill) buf += MillBuildTool(userConfig)
+    if (isPants) buf += PantsBuildTool(userConfig)
+
+    buf.result()
+    // if (isSbt) Some(SbtBuildTool(workspace, userConfig))
+    // else if (isGradle) Some(GradleBuildTool(userConfig))
+    // else if (isMaven) Some(MavenBuildTool(userConfig))
+    // else if (isMill) Some(MillBuildTool(userConfig))
+    // else if (isPants) Some(PantsBuildTool(userConfig))
+    // else None
   }
 
   override def toString: String = {
