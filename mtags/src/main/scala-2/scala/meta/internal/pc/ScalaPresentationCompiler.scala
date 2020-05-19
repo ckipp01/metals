@@ -2,6 +2,7 @@ package scala.meta.internal.pc
 
 import java.io.File
 import java.net.URI
+import java.net.URI
 import java.nio.file.Path
 import java.util
 import java.util.Optional
@@ -22,7 +23,9 @@ import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.ClassFinder
 import scala.meta.internal.metals.DocumentSymbolProvider
 import scala.meta.internal.metals.EmptyCancelToken
+import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.FoldingRangeProvider
+import scala.meta.internal.metals.MultilineStringFormattingProvider
 import scala.meta.internal.metals.MultilineStringFormattingProvider
 import scala.meta.internal.metals.Trees
 import scala.meta.internal.mtags.BuildInfo
@@ -42,6 +45,7 @@ import org.eclipse.lsp4j.DocumentRangeFormattingParams
 import org.eclipse.lsp4j.DocumentSymbol
 import org.eclipse.lsp4j.FoldingRange
 import org.eclipse.lsp4j.Hover
+import org.eclipse.lsp4j.SelectionRange
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextEdit
 
@@ -137,6 +141,18 @@ case class ScalaPresentationCompiler(
     )
   }
 
+  def selectionRange(
+      params: ju.List[OffsetParams]
+  ): CompletableFuture[ju.List[SelectionRange]] =
+    CompletableFuture.completedFuture {
+      compilerAccess.withSharedCompiler(List.empty[SelectionRange].asJava) {
+        pc =>
+          new SelectionRangeProvider(pc.compiler, params)
+            .selectionRanges()
+            .asJava
+      }
+    }
+
   def documentSymbols(
       params: VirtualFileParams
   ): CompletableFuture[ju.List[DocumentSymbol]] = {
@@ -220,13 +236,15 @@ case class ScalaPresentationCompiler(
 
   override def hover(
       params: OffsetParams
-  ): CompletableFuture[Optional[Hover]] =
+  ): CompletableFuture[Optional[Hover]] = {
     compilerAccess.withNonInterruptableCompiler(
       Optional.empty[Hover](),
       params.token
     ) { pc =>
       Optional.ofNullable(new HoverProvider(pc.compiler, params).hover().orNull)
     }
+
+  }
 
   def definition(params: OffsetParams): CompletableFuture[DefinitionResult] = {
     compilerAccess.withNonInterruptableCompiler(

@@ -566,6 +566,7 @@ class MetalsLanguageServer(
         )
       )
       capabilities.setFoldingRangeProvider(true)
+      capabilities.setSelectionRangeProvider(true)
       capabilities.setCodeLensProvider(new CodeLensOptions(false))
       capabilities.setDefinitionProvider(true)
       capabilities.setImplementationProvider(true)
@@ -1052,6 +1053,15 @@ class MetalsLanguageServer(
           }.orNull
         )
     }
+
+  @JsonRequest("textDocument/selectionRange")
+  def selectionRange(
+      params: SelectionRangeParams
+  ): CompletableFuture[util.List[SelectionRange]] = {
+    CancelTokens.future { token =>
+      compilers.selectionRange(params, token, interactiveSemanticdbs)
+    }
+  }
 
   @JsonRequest("textDocument/documentHighlight")
   def documentHighlights(

@@ -13,6 +13,8 @@ import org.eclipse.lsp4j.DocumentRangeFormattingParams;
 import org.eclipse.lsp4j.TextEdit;
 import org.eclipse.lsp4j.DocumentOnTypeFormattingParams;
 import org.eclipse.lsp4j.FoldingRange;
+import org.eclipse.lsp4j.SelectionRange;
+import org.eclipse.lsp4j.SelectionRangeParams;
 
 import java.net.URI;
 import java.nio.file.Path;
@@ -97,6 +99,11 @@ public abstract class PresentationCompiler {
      * Ranges where the document can be collapsed.
      */
     public abstract CompletableFuture<List<FoldingRange>> foldingRange(VirtualFileParams params);
+
+    /**
+     * Selection range for a given position
+     */
+    public abstract CompletableFuture<List<SelectionRange>> selectionRange(List<OffsetParams> params);
 
     /**
      * Formatting changes after pressing specified keys

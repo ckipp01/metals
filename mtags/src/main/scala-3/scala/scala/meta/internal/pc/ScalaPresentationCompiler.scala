@@ -34,6 +34,8 @@ import org.eclipse.lsp4j.DocumentOnTypeFormattingParams
 import org.eclipse.lsp4j.DocumentRangeFormattingParams
 import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.DiagnosticSeverity
+import org.eclipse.lsp4j.SelectionRange
+import org.eclipse.lsp4j.SelectionRangeParams
 import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.Completion
@@ -210,6 +212,14 @@ case class ScalaPresentationCompiler(
       List.empty[TextEdit].asJava
     )
   }
+
+  // TODO NOT IMPLEMENTED
+  def selectionRange(
+      params: ju.List[OffsetParams]
+  ): CompletableFuture[ju.List[SelectionRange]] =
+    CompletableFuture.completedFuture(
+      List.empty[SelectionRange].asJava
+    )
 
   // TODO NOT IMPLEMENTED
   def autoImports(

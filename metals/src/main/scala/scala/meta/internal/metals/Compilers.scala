@@ -1,6 +1,7 @@
 package scala.meta.internal.metals
 
 import java.nio.file.Paths
+import java.nio.file.Paths
 import java.util.Collections
 import java.util.concurrent.ScheduledExecutorService
 import java.{util => ju}
@@ -14,6 +15,7 @@ import scala.meta.inputs.Position
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ammonite.Ammonite
 import scala.meta.internal.mtags
+import scala.meta.internal.pc.EmptySymbolSearch
 import scala.meta.internal.pc.EmptySymbolSearch
 import scala.meta.internal.pc.LogMessages
 import scala.meta.internal.pc.ScalaPresentationCompiler
@@ -33,16 +35,21 @@ import org.eclipse.lsp4j.CompletionParams
 import org.eclipse.lsp4j.DocumentOnTypeFormattingParams
 import org.eclipse.lsp4j.DocumentRangeFormattingParams
 import org.eclipse.lsp4j.DocumentSymbol
+import org.eclipse.lsp4j.DocumentSymbol
+import org.eclipse.lsp4j.DocumentSymbolParams
 import org.eclipse.lsp4j.DocumentSymbolParams
 import org.eclipse.lsp4j.FoldingRange
 import org.eclipse.lsp4j.FoldingRangeRequestParams
 import org.eclipse.lsp4j.Hover
 import org.eclipse.lsp4j.InitializeParams
+import org.eclipse.lsp4j.SelectionRange
+import org.eclipse.lsp4j.SelectionRangeParams
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextDocumentPositionParams
 import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.{Position => LspPosition}
+import scala.meta.pc.OffsetParams
 
 /**
  * Manages lifecycle for presentation compilers in all build targets.
@@ -285,6 +292,18 @@ class Compilers(
       Future.successful(Option.empty)
     }
 
+  def selectionRange(
+      params: SelectionRangeParams,
+      token: CancelToken,
+      interactiveSemanticdbs: InteractiveSemanticdbs // I don't think I even nee these
+  ): Future[ju.List[SelectionRange]] = {
+    withPC(params, None) { (pc, positions) =>
+      val offsetParamPositions: ju.List[OffsetParams] =
+        positions.map(CompilerOffsetParams.fromPos(_, token))
+      pc.selectionRange(offsetParamPositions).asScala
+    }.getOrElse(Future.successful(new ju.ArrayList))
+  }
+
   def definition(
       params: TextDocumentPositionParams,
       token: CancelToken
@@ -404,6 +423,23 @@ class Compilers(
         ammoniteInputPosOpt(path, params.getPosition, interactiveSemanticdbs)
           .getOrElse(defaultInputPos)
       val pos = paramsPos.toMeta(input)
+
+      fn(compiler, pos)
+    }
+  }
+
+  private def withPC[T](
+      params: SelectionRangeParams,
+      interactiveSemanticdbs: Option[InteractiveSemanticdbs]
+  )(fn: (PresentationCompiler, ju.List[Position]) => T): Option[T] = {
+    val path = params.getTextDocument.getUri.toAbsolutePath
+    loadCompiler(path, interactiveSemanticdbs).map { compiler =>
+      val input = path
+        .toInputFromBuffers(buffers)
+        .copy(path = params.getTextDocument.getUri())
+      val pos = params
+        .getPositions()
+        .map(_.toMeta(input))
 
       fn(compiler, pos)
     }
