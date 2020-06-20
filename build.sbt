@@ -139,7 +139,7 @@ onLoad.in(Global) ~= { old =>
       prePush,
       """#!/bin/sh
         |set -eux
-        |./bin/scalafmt --diff
+        |bin/scalafmt --diff
         |git diff --exit-code
         |""".stripMargin.getBytes()
     )
@@ -159,10 +159,10 @@ commands += Command.command("save-expect") { s =>
 }
 
 lazy val V = new {
-     val scala210 = "2.10.7"
+  val scala210 = "2.10.7"
   val scala211 = "2.11.12"
   val scala212 = "2.12.11"
-    val scala213 = "2.13.2"
+  val scala213 = "2.13.2"
   val scalameta = "4.3.15"
   val semanticdb = scalameta
   val bsp = "2.0.0-M4+10-61e61e87"
