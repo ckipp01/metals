@@ -160,14 +160,14 @@ commands += Command.command("save-expect") { s =>
 
 lazy val V = new {
      val scala210 = "2.10.7"
-  val scala211 = "2.11.12"
+    val scala211 = "2.11.12"
   val scala212 = "2.12.11"
     val scala213 = "2.13.2"
   val scalameta = "4.3.15"
   val semanticdb = scalameta
   val bsp = "2.0.0-M4+10-61e61e87"
   val bloop = "1.4.0-RC1-235-3231567a"
-  val scala3 = "0.25.0-RC2"
+    val scala3 = "0.25.0-RC2"
   val bloopNightly = bloop
   val sbtBloop = bloop
   val gradleBloop = bloop
