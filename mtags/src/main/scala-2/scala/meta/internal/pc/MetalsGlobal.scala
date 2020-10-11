@@ -101,7 +101,10 @@ class MetalsGlobal(
   lazy val semanticdbOps = new MetalsGlobalSemanticdbOps(compiler)
 
   def semanticdbSymbol(symbol: Symbol): String = {
+    pprint.log("taking pc symbol and converting to semantic")
     import semanticdbOps._
+    pprint.log(symbol)
+    pprint.log(symbol.toSemantic)
     symbol.toSemantic
   }
 

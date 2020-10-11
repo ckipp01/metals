@@ -327,7 +327,8 @@ class Compilers(
   def definition(
       params: TextDocumentPositionParams,
       token: CancelToken
-  ): Future[DefinitionResult] =
+  ): Future[DefinitionResult] = {
+    pprint.log("entering definition method in compilers")
     withPCAndAdjustLsp(params, None) { (pc, pos, adjust) =>
       pc.definition(CompilerOffsetParams.fromPos(pos, token))
         .asScala
@@ -341,6 +342,7 @@ class Compilers(
           )
         }
     }
+  }
 
   def signatureHelp(
       params: TextDocumentPositionParams,
@@ -391,6 +393,7 @@ class Compilers(
   def loadWorksheetCompiler(
       path: AbsolutePath
   ): Option[PresentationCompiler] = {
+    pprint.log("path is a worksheet, so getting from worksheet cache")
     worksheetsCache.get(path)
   }
 
@@ -399,6 +402,20 @@ class Compilers(
       classpath: List[Path],
       sources: List[Path]
   ): Unit = {
+    pprint.pprintln(
+      "About to restart the worksheet presentationCompiler with the following"
+    )
+    pprint.log(classpath)
+    pprint.log(sources)
+    val worksheetSearch = new StandaloneSymbolSearch(
+      workspace,
+      classpath.map(AbsolutePath(_)),
+      sources.map(AbsolutePath(_)),
+      buffers,
+      isExcludedPackage,
+      workspaceFallback = Some(search)
+    )
+
     val created: Option[Unit] = for {
       targetId <- buildTargets.inverseSources(path)
       scalaTarget <- buildTargets.scalaTarget(targetId)
@@ -417,14 +434,6 @@ class Compilers(
         statusBar.trackBlockingTask(
           s"${config.icons.sync}Loading worksheet presentation compiler"
         ) {
-          val worksheetSearch = new StandaloneSymbolSearch(
-            workspace,
-            classpath.map(AbsolutePath(_)),
-            sources.map(AbsolutePath(_)),
-            buffers,
-            isExcludedPackage,
-            workspaceFallback = Some(search)
-          )
           newCompiler(scalac, scalaTarget, classpath, worksheetSearch)
         }
       )
@@ -502,8 +511,20 @@ class Compilers(
       interactiveSemanticdbs: Option[InteractiveSemanticdbs]
   )(fn: (PresentationCompiler, Position, AdjustLspData) => T): T = {
     val path = params.getTextDocument.getUri.toAbsolutePath
-    val compiler =
-      loadCompiler(path, interactiveSemanticdbs).getOrElse(ramboCompiler)
+
+    val isThereACompiler = loadCompiler(path, interactiveSemanticdbs)
+
+    val compiler = isThereACompiler match {
+      case Some(compiler) =>
+        pprint.log("found compiler, so using it")
+        compiler
+      case None =>
+        pprint.log("No compiler for this path so giving you a rambo compiler")
+        ramboCompiler
+    }
+
+    //val compiler =
+    //  loadCompiler(path, interactiveSemanticdbs).getOrElse(ramboCompiler)
 
     val (input, pos, adjust) =
       sourceAdjustments(

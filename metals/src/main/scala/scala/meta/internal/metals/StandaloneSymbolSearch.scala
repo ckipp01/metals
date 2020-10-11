@@ -34,7 +34,7 @@ class StandaloneSymbolSearch(
       isExcludedPackage
     )
 
-  private val index = OnDemandSymbolIndex()
+  private val index = OnDemandSymbolIndex() // This is just an empty index
   sources.foreach(index.addSourceJar)
 
   private val docs = new Docstrings(index)
@@ -56,10 +56,15 @@ class StandaloneSymbolSearch(
       .asJava
 
   override def definition(x: String): ju.List[Location] = {
-    destinationProvider
+    pprint.log("In definition method in the standalone symbol search")
+    val destinations = destinationProvider
       .fromSymbol(x)
       .flatMap(_.toResult)
       .map(_.locations)
+
+    pprint.log("Seeing what we got from the standalone")
+    pprint.log(destinations)
+    destinations
       .orElse(workspaceFallback.map(_.definition(x)))
       .getOrElse(ju.Collections.emptyList())
   }

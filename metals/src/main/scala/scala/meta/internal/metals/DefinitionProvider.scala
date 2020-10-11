@@ -50,6 +50,7 @@ final class DefinitionProvider(
     remote: RemoteLanguageServer
 )(implicit ec: ExecutionContext) {
 
+  pprint.pprintln("---- about to create a new destinationProvider -------")
   val destinationProvider = new DestinationProvider(
     index,
     buffers,
@@ -63,13 +64,20 @@ final class DefinitionProvider(
       params: TextDocumentPositionParams,
       token: CancelToken
   ): Future[DefinitionResult] = {
+    pprint.pprintln("entered definition provider definition method")
     val fromSemanticdb =
       semanticdbs.textDocument(path).documentIncludingStale
     val fromSnapshot = fromSemanticdb match {
       case Some(doc) =>
+        pprint.log("Found a document in semantidb")
         definitionFromSnapshot(path, params, doc)
       case _ =>
-        DefinitionResult.empty
+        pprint.pprintln(
+          "found nothing again in semanticdb, and therefore returning an empty definitionResult"
+        )
+        val nothing = DefinitionResult.empty
+        pprint.log(nothing)
+        nothing
     }
     val fromIndex =
       if (fromSnapshot.isEmpty && remote.isEnabledForPath(path)) {
@@ -79,6 +87,7 @@ final class DefinitionProvider(
       }
     fromIndex.flatMap { result =>
       if (result.isEmpty) {
+        pprint.log("result was empty")
         compilers().definition(params, token)
       } else {
         if (fromSemanticdb.isEmpty) {
@@ -89,11 +98,21 @@ final class DefinitionProvider(
     }
   }
 
-  def fromSymbol(sym: String): ju.List[Location] =
+  def fromSymbol(sym: String): ju.List[Location] = {
+    pprint.pprintln(
+      "Going to no check in the destination provider for this symbol"
+    )
+    pprint.log(sym)
     destinationProvider.fromSymbol(sym).flatMap(_.toResult) match {
-      case None => ju.Collections.emptyList()
-      case Some(destination) => destination.locations
+      case None =>
+        pprint.pprintln("Not found in the destination provider")
+        ju.Collections.emptyList()
+      case Some(destination) =>
+        pprint.pprintln("Found destination")
+        pprint.log(destination.locations)
+        destination.locations
     }
+  }
 
   /**
    * Returns VirtualFile that contains the definition of
@@ -251,6 +270,7 @@ class DestinationProvider(
   def fromSymbol(symbol: String): Option[DefinitionDestination] = {
     for {
       symbolDefinition <- index.definition(Symbol(symbol))
+      _ = pprint.log(symbolDefinition)
       if symbolDefinition.path.exists
       destinationDoc = bestTextDocument(symbolDefinition)
       destinationPath = symbolDefinition.path.toFileOnDisk(workspace)

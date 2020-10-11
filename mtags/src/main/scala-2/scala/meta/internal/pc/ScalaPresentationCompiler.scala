@@ -236,6 +236,9 @@ case class ScalaPresentationCompiler(
     }
 
   def definition(params: OffsetParams): CompletableFuture[DefinitionResult] = {
+    pprint.log(
+      "Entering the definition method in the ScalaPresentationCompiler class"
+    )
     compilerAccess.withNonInterruptableCompiler(
       DefinitionResultImpl.empty,
       params.token
@@ -257,6 +260,7 @@ case class ScalaPresentationCompiler(
   }
 
   def newCompiler(): MetalsGlobal = {
+    pprint.pprintln("---- about to return a new compiler ----")
     val classpath = this.classpath.mkString(File.pathSeparator)
     val vd = new VirtualDirectory("(memory)", None)
     val settings = new Settings

@@ -12,6 +12,7 @@ import org.eclipse.lsp4j.Location
 class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
   import compiler._
   def definition(): DefinitionResult = {
+    pprint.log("entering the definition method in the PcDefinitionProvider")
     if (params.isWhitespace || params.isDelimiter || params.offset() == 0) {
       DefinitionResultImpl.empty
     } else {
@@ -22,14 +23,17 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
       )
       val pos = unit.position(params.offset())
       val tree = definitionTypedTreeAt(pos)
+      pprint.log(tree)
       if (
         tree.symbol == null ||
         tree.symbol == NoSymbol ||
         tree.symbol.isErroneous ||
         tree.symbol.isSynthetic
       ) {
+        pprint.log("seemingly empty, erroneous or synthetics")
         DefinitionResultImpl.empty
       } else if (tree.symbol.hasPackageFlag) {
+        pprint.log("Tree has package flag")
         DefinitionResultImpl(
           semanticdbSymbol(tree.symbol),
           ju.Collections.emptyList()
@@ -39,6 +43,7 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
         tree.symbol.pos.isDefined &&
         tree.symbol.pos.source.eq(unit.source)
       ) {
+        pprint.log("your here")
         DefinitionResultImpl(
           semanticdbSymbol(tree.symbol),
           ju.Collections.singletonList(
@@ -48,11 +53,18 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
       } else {
         val res = new ju.ArrayList[Location]()
         tree.symbol.alternatives.foreach { alternative =>
+          pprint.log(alternative)
           val sym = semanticdbSymbol(alternative)
           if (sym.isGlobal) {
-            res.addAll(search.definition(sym))
+            pprint.log(
+              "alternative symbol is global about to search for it in the symbol search"
+            )
+            val result = search.definition(sym)
+            pprint.log(result)
+            res.addAll(result)
           }
         }
+        pprint.log("about to reutrn the definition result impl")
         DefinitionResultImpl(
           semanticdbSymbol(tree.symbol),
           res

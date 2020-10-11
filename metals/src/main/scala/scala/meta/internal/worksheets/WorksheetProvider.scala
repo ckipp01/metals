@@ -60,6 +60,7 @@ class WorksheetProvider(
     buildTargets: BuildTargets,
     languageClient: MetalsLanguageClient,
     userConfig: () => UserConfiguration,
+    indexWorkspace: () => Future[Unit],
     statusBar: StatusBar,
     diagnostics: Diagnostics,
     embedded: Embedded,
@@ -276,12 +277,16 @@ class WorksheetProvider(
     val relativePath = path.toRelative(workspace)
     val worksheet = mdoc.evaluateWorksheet(relativePath.toString(), input.value)
     val classpath = worksheet.classpath().asScala.toList
+    pprint.pprintln("worksheet classpath")
+    pprint.log(classpath)
     val previousDigest = worksheetsDigests.getOrElse(path, "")
     val newDigest = calculateDigest(classpath)
 
     if (newDigest != previousDigest) {
+      pprint.pprintln("new digest doesn't equal previous digest")
       worksheetsDigests.put(path, newDigest)
       val sourceDeps = fetchDependencySources(worksheet.dependencies().asScala)
+      indexWorkspace()
       compilers.restartWorksheetPresentationCompiler(
         path,
         classpath,

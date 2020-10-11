@@ -37,6 +37,10 @@ class MetalsSymbolSearch(
     docs.documentation(symbol)
 
   def definition(symbol: String): ju.List[Location] = {
+    pprint.pprintln(
+      "In definition method in metals symbol search. Going to look in the definition provider for this symbol"
+    )
+    pprint.log(symbol)
     defn.fromSymbol(symbol)
   }
 

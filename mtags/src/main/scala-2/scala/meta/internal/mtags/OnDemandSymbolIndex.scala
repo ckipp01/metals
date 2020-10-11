@@ -50,6 +50,8 @@ final class OnDemandSymbolIndex(
   private val onErrorOption = onError.andThen(_ => None)
 
   override def definition(symbol: Symbol): Option[SymbolDefinition] = {
+    pprint.pprintln("-- in the definition method of the ondemand symbol index")
+    pprint.log(symbol)
     try findSymbolDefinition(symbol, symbol)
     catch onErrorOption
   }
@@ -73,7 +75,11 @@ final class OnDemandSymbolIndex(
   override def addSourceJar(jar: AbsolutePath): Unit =
     tryRun {
       try {
+        pprint.pprintln("Attempting to add source jar...")
+        pprint.log(jar)
         if (sourceJars.addEntry(jar)) {
+          pprint.pprintln("added...")
+          pprint.log(jar)
           FileIO.withJarFileSystem(jar, create = false) { root =>
             root.listRecursive.foreach {
               case source if source.isScala =>
@@ -195,23 +201,34 @@ final class OnDemandSymbolIndex(
       symbol: Symbol
   ): Option[SymbolDefinition] = {
     if (!definitions.contains(symbol.value)) {
+      pprint.pprintln("Definitions don't have what we are looking for...")
+      pprint.log(definitions)
       // Fallback 1: enter the toplevel symbol definition
       val toplevel = symbol.toplevel
+      pprint.pprintln("Let's take a look at the top level symbol")
+      pprint.log(toplevel)
       toplevels.get(toplevel.value) match {
         case Some(file) =>
+          pprint.pprintln("top levels also had nothing...")
+          pprint.log(toplevels)
           addMtagsSourceFile(file)
         case _ =>
+          pprint.pprintln("Going to attempt to load from source jars")
           loadFromSourceJars(trivialPaths(toplevel))
             .orElse(loadFromSourceJars(modulePaths(toplevel)))
             .foreach(addMtagsSourceFile)
       }
     }
     if (!definitions.contains(symbol.value)) {
+      pprint.pprintln("still don't have it in the definitions...")
+      pprint.log(definitions)
       // Fallback 2: guess related symbols from the enclosing class.
       DefinitionAlternatives(symbol)
         .flatMap(alternative => findSymbolDefinition(querySymbol, alternative))
         .headOption
     } else {
+      pprint.pprintln("Now we got it in definitions!")
+      pprint.log(definitions)
       definitions.get(symbol.value).map { path =>
         SymbolDefinition(
           querySymbol = querySymbol,
@@ -224,12 +241,20 @@ final class OnDemandSymbolIndex(
 
   // Returns the first path that resolves to a file.
   private def loadFromSourceJars(paths: List[String]): Option[AbsolutePath] = {
+    pprint.pprintln("loading from the following paths...")
+    pprint.log(paths)
+    pprint.log(sourceJars.toString())
     paths match {
       case Nil => None
       case head :: tail =>
         sourceJars.load(head) match {
-          case Some(file) => Some(file)
-          case _ => loadFromSourceJars(tail)
+          case Some(file) =>
+            pprint.pprintln("Found...")
+            pprint.log(file)
+            Some(file)
+          case _ =>
+            pprint.pprintln("didn't resolve to a file")
+            loadFromSourceJars(tail)
         }
     }
   }

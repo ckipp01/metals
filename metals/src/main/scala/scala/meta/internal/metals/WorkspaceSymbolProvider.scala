@@ -93,11 +93,13 @@ final class WorkspaceSymbolProvider(
   }
 
   private def indexClasspathUnsafe(): Unit = {
+    scribe.debug("about to index classpath unsafe")
     val packages = new PackageIndex()
     packages.visitBootClasspath(isExcludedPackage)
     for {
       classpathEntry <- buildTargets.allWorkspaceJars
     } {
+      //pprint.log(classpathEntry)
       packages.visit(classpathEntry)
     }
     inDependencies = ClasspathSearch.fromPackages(

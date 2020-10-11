@@ -135,6 +135,7 @@ class MetalsLanguageServer(
   var focusedDocument: Option[AbsolutePath] = None
   private val focusedDocumentBuildTarget =
     new AtomicReference[b.BuildTargetIdentifier]()
+  scribe.info("----- about to create the first symbol index ------")
   private val definitionIndex = newSymbolIndex()
   private val symbolDocs = new Docstrings(definitionIndex)
   var bspSession: Option[BspSession] =
@@ -170,6 +171,7 @@ class MetalsLanguageServer(
       params => didChangeWatchedFiles(params)
     )
   )
+  scribe.info("----- indexing promise thing ------")
   private val indexingPromise: Promise[Unit] = Promise[Unit]()
   private val buildServerPromise: Promise[Unit] = Promise[Unit]()
   val parseTrees = new BatchedFunction[AbsolutePath, Unit](paths =>
@@ -408,6 +410,7 @@ class MetalsLanguageServer(
         interactiveSemanticdbs
       )
     )
+    scribe.info("------ about to create the definition provider -----")
     definitionProvider = new DefinitionProvider(
       workspace,
       mtags,
@@ -523,6 +526,7 @@ class MetalsLanguageServer(
       definitionProvider,
       semanticdbs
     )
+    scribe.info("----- about to create workspace symbols -------")
     workspaceSymbols = new WorkspaceSymbolProvider(
       workspace,
       clientConfig.initialConfig.statistics,
@@ -531,6 +535,7 @@ class MetalsLanguageServer(
       interactiveSemanticdbs.toFileOnDisk,
       excludedPackageHandler.isExcludedPackage
     )
+    scribe.info("----- about to create metals symbol search -------")
     symbolSearch = new MetalsSymbolSearch(
       symbolDocs,
       workspaceSymbols,
@@ -616,6 +621,7 @@ class MetalsLanguageServer(
         buildTargets,
         languageClient,
         () => userConfig,
+        () => profiledIndexWorkspace(() => ()),
         statusBar,
         diagnostics,
         embedded,
@@ -811,6 +817,10 @@ class MetalsLanguageServer(
       statusBar.start(sh, 0, 1, TimeUnit.SECONDS)
       tables.connect()
       registerNiceToHaveFilePatterns()
+      scribe.info("---- Recieved initialized notifcation from client -----")
+      scribe.info(
+        "---- About to index the classpath for workspace symbols ----"
+      )
       val result = Future
         .sequence(
           List[Future[Unit]](
@@ -1171,10 +1181,12 @@ class MetalsLanguageServer(
   @JsonRequest("textDocument/definition")
   def definition(
       position: TextDocumentPositionParams
-  ): CompletableFuture[util.List[Location]] =
+  ): CompletableFuture[util.List[Location]] = {
+    scribe.info("---- Receieve request for definition ----")
     CancelTokens.future { token =>
       definitionOrReferences(position, token).map(_.locations)
     }
+  }
 
   @JsonRequest("textDocument/typeDefinition")
   def typeDefinition(
@@ -2061,6 +2073,7 @@ class MetalsLanguageServer(
   private var lastImportedBuilds = List.empty[ImportedBuild]
 
   private def indexWorkspace(check: () => Unit): Unit = {
+    pprint.pprintln("------- indexing workspace ---------")
     val i = (ammonite.lastImportedBuild :: lastImportedBuilds).reduce(_ ++ _)
     timerProvider.timedThunk(
       "updated build targets",
@@ -2103,6 +2116,7 @@ class MetalsLanguageServer(
       "indexed library classpath",
       clientConfig.initialConfig.statistics.isIndex
     ) {
+      pprint.pprintln("about to index classpath of workspace symbols")
       workspaceSymbols.indexClasspath()
     }
     timerProvider.timedThunk(
@@ -2121,6 +2135,7 @@ class MetalsLanguageServer(
       "indexed library sources",
       clientConfig.initialConfig.statistics.isIndex
     ) {
+      pprint.pprintln("about to index dependencySources..")
       indexDependencySources(i.dependencySources)
     }
 
@@ -2160,6 +2175,10 @@ class MetalsLanguageServer(
   private def indexDependencySources(
       dependencySources: b.DependencySourcesResult
   ): Unit = {
+    pprint.pprintln(
+      "Now in indexDependencySources with the following sources..."
+    )
+    pprint.log(dependencySources)
     // Track used Jars so that we can
     // remove cached symbols from Jars
     // that are not used
@@ -2215,6 +2234,8 @@ class MetalsLanguageServer(
    * @param path JAR path
    */
   private def addSourceJarSymbols(path: AbsolutePath): Unit = {
+    pprint.pprintln("Adding source jar symbolds...")
+    pprint.log(path)
     definitionIndex.addSourceJarTopLevels(
       path,
       () => {
@@ -2380,6 +2401,10 @@ class MetalsLanguageServer(
           if (semanticDBDoc.isEmpty) {
             warnings.noSemanticdb(source)
           }
+          pprint.pprintln(
+            "---- nothing in semeantic db, so checking the presentation compiler -----"
+          )
+          pprint.log(source)
           // Even if it failed to retrieve the symbol occurrence from semanticdb,
           // try to find its definitions from presentation compiler.
           definitionResult(positionParams, token)
@@ -2400,7 +2425,7 @@ class MetalsLanguageServer(
       token: CancelToken = EmptyCancelToken
   ): Future[DefinitionResult] = {
     val source = position.getTextDocument.getUri.toAbsolutePath
-    if (source.isScalaFilename) {
+    if (source.isScalaFilename) { // TODO this check really isn't needed here since we do it above
       val result =
         timerProvider.timedThunk(
           "definition",
@@ -2410,10 +2435,12 @@ class MetalsLanguageServer(
         )
       result.onComplete {
         case Success(value) =>
+          pprint.log(value)
           // Record what build target this dependency source (if any) was jumped from,
           // needed to know what classpath to compile the dependency source with.
           interactiveSemanticdbs.didDefinition(source, value)
         case _ =>
+          pprint.log("Got nothing back from definition method")
       }
       result
     } else {

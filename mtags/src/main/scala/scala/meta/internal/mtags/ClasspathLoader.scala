@@ -73,9 +73,13 @@ final class ClasspathLoader() {
   override def toString: String = loader.getURLs.toList.toString()
 
   def addClasspath(classpath: Classpath): Boolean = {
+    pprint.pprintln("Adding classpath...")
+    pprint.log(classpath)
     classpath.entries.forall(addEntry)
   }
   def addEntry(entry: AbsolutePath): Boolean = {
+    pprint.pprintln("Adding entry..")
+    pprint.log(entry)
     loader.addEntry(entry)
   }
 
