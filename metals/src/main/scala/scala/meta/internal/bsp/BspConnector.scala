@@ -57,6 +57,7 @@ class BspConnector(
     def connect(
         workspace: AbsolutePath
     ): Future[Option[BuildServerConnection]] = {
+      pprint.log("connect to dat thing")
       scribe.info("Attempting to connect to the build server...")
       resolve() match {
         case ResolvedNone =>

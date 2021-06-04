@@ -1878,7 +1878,7 @@ class MetalsLanguageServer(
           exit match {
             case Left(exitCode) =>
               scribe.error(
-                s"Create of .bsp failed with exit code: $exitCode"
+                s"Creation of .bsp failed with exit code: $exitCode"
               )
               languageClient.showMessage(
                 Messages.BspProvider.genericUnableToCreateConfig
@@ -1902,11 +1902,13 @@ class MetalsLanguageServer(
           .generateBspConfig(
             workspace,
             languageClient,
-            args =>
+            args => {
+              scribe.info(s"running '${args.mkString(" ")}'")
               bspConfigGenerator.runUnconditionally(
                 buildTool,
                 args
               )
+            }
           )
           .map(status => ensureAndConnect(buildTool, status))
       case buildTools =>
@@ -2019,6 +2021,7 @@ class MetalsLanguageServer(
       scribe.warn("Build server is not auto-connectable.")
       Future.successful(BuildChange.None)
     } else {
+      pprint.log("ok here is where we start to connect")
       autoConnectToBuildServer()
     }
 
@@ -2080,13 +2083,10 @@ class MetalsLanguageServer(
   }
 
   private def disconnectOldBuildServer(): Future[Unit] = {
-    bspSession.foreach(connection =>
-      scribe.info(s"Disconnecting from ${connection.main.name} session...")
-    )
-
     bspSession match {
       case None => Future.successful(())
       case Some(session) =>
+        scribe.info(s"Disconnecting from ${session.main.name} session...")
         bspSession = None
         diagnostics.reset()
         buildTargets.resetConnections(List.empty)
