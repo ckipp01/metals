@@ -142,22 +142,23 @@ final class StatusBar(
   private def tickUnsafe(): Unit = {
     garbageCollect()
     mostRelevant() match {
-      case Some(value) =>
+      case Some(item) =>
         val isUnchanged = activeItem.exists {
           // Don't re-publish static messages.
-          case m: Message => m eq value
+          case message: Message => message eq item
           case _ => false
         }
         if (!isUnchanged) {
-          activeItem = Some(value)
+          activeItem = Some(item)
           val show: java.lang.Boolean = if (isHidden) true else null
-          val params = value match {
+          // TODO we'll probably need to put together progress params here instead of status params
+          val params = item match {
             case Message(p) =>
               p.copy(show = show)
             case _ =>
-              MetalsStatusParams(value.formattedMessage, show = show)
+              MetalsStatusParams(item.formattedMessage, show = show)
           }
-          value.show()
+          item.show()
           client.metalsStatus(params)
           isHidden = false
         }

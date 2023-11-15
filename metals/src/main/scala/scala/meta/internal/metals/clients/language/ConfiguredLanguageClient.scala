@@ -21,6 +21,11 @@ import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.ShowMessageRequestParams
+import org.eclipse.lsp4j.ProgressParams
+import org.eclipse.lsp4j.WorkDoneProgressBegin
+import org.eclipse.lsp4j.jsonrpc.messages
+import org.eclipse.lsp4j.WorkDoneProgressParams
+import org.eclipse.lsp4j.WorkDoneProgressNotification
 
 /**
  * Delegates requests/notifications to the underlying language client according to the user configuration.
@@ -55,7 +60,26 @@ final class ConfiguredLanguageClient(
 
     val logMessage = params.logMessage(clientConfig.icons())
     statusBarState match {
-      case On => underlying.metalsStatus(params)
+      case On =>
+        val token: messages.Either[java.lang.String, java.lang.Integer] =
+          Right[String, Integer](3).asJava
+
+        val begin: messages.Either[
+          org.eclipse.lsp4j.WorkDoneProgressNotification,
+          Object,
+        ] = {
+          val begin = new WorkDoneProgressBegin()
+          begin.setTitle(params.text)
+          begin.setMessage("some message")
+          begin.setPercentage(0)
+          begin.setCancellable(true)
+
+          Left[WorkDoneProgressNotification, Object](begin).asJava
+        }
+
+        underlying.notifyProgress(new ProgressParams(token, begin))
+        underlying.metalsStatus(params)
+
       case ShowMessage if logMessage.nonEmpty && !pendingShowMessage.get() =>
         if (params.command != null && params.command.nonEmpty) {
           val action = new MessageActionItem(
